@@ -3,12 +3,18 @@ import Foundation
 
 /// Finds Samsung remote-control receivers on the local network with an SSDP search.
 public final class SSDPDiscovery {
-    public static let searchMessage =
+    /// TVs answer RemoteControlReceiver; Smart Monitors such as the M7 only answer RenderingControl.
+    /// Hosts that aren't Samsung devices are filtered out later by `DeviceInfoClient`.
+    public static let searchMessages = [
+        "urn:samsung.com:device:RemoteControlReceiver:1",
+        "urn:schemas-upnp-org:service:RenderingControl:1",
+    ].map { target in
         "M-SEARCH * HTTP/1.1\r\n" +
         "HOST: 239.255.255.250:1900\r\n" +
         "MAN: \"ssdp:discover\"\r\n" +
         "MX: 2\r\n" +
-        "ST: urn:samsung.com:device:RemoteControlReceiver:1\r\n\r\n"
+        "ST: \(target)\r\n\r\n"
+    }
 
     public init() {}
 
@@ -44,11 +50,13 @@ public final class SSDPDiscovery {
         address.sin_port = in_port_t(1900).bigEndian
         inet_pton(AF_INET, "239.255.255.250", &address.sin_addr)
 
-        let message = Array(searchMessage.utf8)
-        for _ in 0..<2 {
-            _ = withUnsafePointer(to: &address) {
-                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                    sendto(fd, message, message.count, 0, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+        for searchMessage in searchMessages {
+            let message = Array(searchMessage.utf8)
+            for _ in 0..<2 {
+                _ = withUnsafePointer(to: &address) {
+                    $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                        sendto(fd, message, message.count, 0, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+                    }
                 }
             }
         }

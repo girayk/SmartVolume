@@ -88,8 +88,11 @@ final class SSDPDiscoveryTests: XCTestCase {
         XCTAssertNil(SSDPDiscovery.parseLocationHost("HTTP/1.1 200 OK\r\nST: x\r\n"))
     }
 
-    func testSearchMessageHasST() {
-        XCTAssertTrue(SSDPDiscovery.searchMessage.contains("ST: urn:samsung.com:device:RemoteControlReceiver:1\r\n"))
-        XCTAssertTrue(SSDPDiscovery.searchMessage.hasSuffix("\r\n\r\n"))
+    func testSearchMessagesCoverTVsAndMonitors() {
+        let messages = SSDPDiscovery.searchMessages
+        XCTAssertTrue(messages.contains { $0.contains("ST: urn:samsung.com:device:RemoteControlReceiver:1\r\n") })
+        // Smart Monitors such as the M7 only answer this one.
+        XCTAssertTrue(messages.contains { $0.contains("ST: urn:schemas-upnp-org:service:RenderingControl:1\r\n") })
+        XCTAssertTrue(messages.allSatisfy { $0.hasSuffix("\r\n\r\n") })
     }
 }
